@@ -1,32 +1,42 @@
-
 name: Build
 
 on:
   push:
     branches:
-      - master
+      - main
+      - master  # Include both branches if needed
 
 jobs:
   build:
     name: Build
-    runs-on: [self-hosted]
+    runs-on: ubuntu-latest  # Or change to self-hosted if you have a self-hosted runner
     steps:
       - uses: actions/checkout@v2
         with:
-          fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
-      - uses: sonarsource/sonarqube-scan-action@master
+          fetch-depth: 0  # Disable shallow clone for better analysis context
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      # Uncomment the following lines to fail the job if the Quality Gate is red
+      # - name: SonarQube Quality Gate Check
+      #   uses: sonarsource/sonarqube-quality-gate-action@master
+      #   timeout-minutes: 5
+      #   env:
+      #     SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
       - name: NPM Install
         run: npm install
-        
+
       - name: Docker build and push
-        run: |
-          # Run commands to build and push Docker images
-          docker build -t my-app .
-          docker tag my-app ajayrichard/my-app:latest
-          docker login -u ${{ secrets.Dockerhub_username }} -p ${{ secrets.Dockerhub_token }}
-          docker push ajayrichard/my-app:latest
         env:
           DOCKER_CLI_ACI: 1
+        run: |
+          # Build and push Docker images
+          docker build -t my-app .
+          docker tag my-app ajayrichard/my-app:latest
+          echo ${{ secrets.DOCKERHUB_TOKEN }} | docker login -u ${{ secrets.DOCKERHUB_USERNAME }} --password-stdin
+          docker push ajayrichard/my-app:latest
